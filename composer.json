@@ -1,6 +1,6 @@
 {
-    "name": "deg540/php-testing-boilerplate",
-    "description": "Php testing boilerplate",
+    "name": "user-login/php-user-login",
+    "description": "Php testing userLogin",
     "type": "project",
     "require": {
         "php": "^8.0"
