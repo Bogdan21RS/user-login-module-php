@@ -15,6 +15,19 @@ use function mysql_xdevapi\getSession;
 
 final class UserLoginServiceTest extends TestCase
 {
+    private $userLoginService;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $sessionManager = Mockery::mock(SessionManager::class);
+
+        $sessionManager->allows('getSessions')->andReturn(5);
+
+        $this->userLoginService = new UserLoginService($sessionManager);
+    }
+
+
     /**
      * @test
      */
@@ -22,11 +35,10 @@ final class UserLoginServiceTest extends TestCase
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService(new FacebookSessionManager());
         $this->expectExceptionMessage("User already logged in");
 
-        $userLoginService->manualLogin($user);
-        $userLoginService->manualLogin($user);
+        $this->userLoginService->manualLogin($user);
+        $this->userLoginService->manualLogin($user);
     }
 
     /**
@@ -36,10 +48,9 @@ final class UserLoginServiceTest extends TestCase
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService(new FacebookSessionManager());
-        $userLoginService->manualLogin($user);
+        $this->userLoginService->manualLogin($user);
 
-        $this->assertEquals("user logged", $userLoginService->getLoggedUser($user));
+        $this->assertEquals("user logged", $this->userLoginService->getLoggedUser($user));
     }
 
     /**
@@ -47,13 +58,7 @@ final class UserLoginServiceTest extends TestCase
      */
     public function returnedNumberOfSessionsIsCorrect(): void
     {
-        $sessionManager = Mockery::mock(SessionManager::class);
-
-        $sessionManager->allows('getSessions')->andReturn(5);
-
-        $userLoginService = new UserLoginService($sessionManager);
-
-        $this->assertEquals(5, $userLoginService->getExternalSessions());
+        $this->assertEquals(5, $this->userLoginService->getExternalSessions());
     }
 
     /**
@@ -63,9 +68,7 @@ final class UserLoginServiceTest extends TestCase
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService(new FacebookSessionManager());
-
-        $this->assertEquals("User not found", $userLoginService->logout($user->getUserName()));
+        $this->assertEquals("User not found", $this->userLoginService->logout($user->getUserName()));
     }
 
     /**
@@ -75,9 +78,8 @@ final class UserLoginServiceTest extends TestCase
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService(new FacebookSessionManager());
-        $userLoginService->manualLogin($user);
+        $this->userLoginService->manualLogin($user);
 
-        $this->assertEquals("User not found", $userLoginService->logout($user->getUserName()));
+        $this->assertEquals("User not found", $this->userLoginService->logout($user->getUserName()));
     }
 }
