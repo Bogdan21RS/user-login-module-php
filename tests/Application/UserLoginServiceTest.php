@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace UserLoginService\Tests\Application;
 
+use Mockery;
 use PHPUnit\Framework\TestCase;
+use UserLoginService\Application\SessionManager;
 use UserLoginService\Application\UserLoginService;
 use UserLoginService\Domain\User;
 use UserLoginService\Infrastructure\FacebookSessionManager;
 use function mysql_xdevapi\getSession;
+
 
 final class UserLoginServiceTest extends TestCase
 {
     /**
      * @test
      */
-    public function userAlreadywLoggedIn()
+    public function userAlreadyLoggedIn()
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService();
+        $userLoginService = new UserLoginService(new FacebookSessionManager());
         $this->expectExceptionMessage("User already logged in");
 
         $userLoginService->manualLogin($user);
@@ -33,7 +36,7 @@ final class UserLoginServiceTest extends TestCase
     {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService();
+        $userLoginService = new UserLoginService(new FacebookSessionManager());
         $userLoginService->manualLogin($user);
 
         $this->assertEquals("user logged", $userLoginService->getLoggedUser($user));
@@ -44,13 +47,37 @@ final class UserLoginServiceTest extends TestCase
      */
     public function returnedNumberOfSessionsIsCorrect(): void
     {
+        $sessionManager = Mockery::mock(SessionManager::class);
+
+        $sessionManager->allows('getSessions')->andReturn(5);
+
+        $userLoginService = new UserLoginService($sessionManager);
+
+        $this->assertEquals(5, $userLoginService->getExternalSessions());
+    }
+
+    /**
+     * @test
+     */
+    public function unloggedUserLoggingOutReturnsNotFound(): void
+    {
         $user = new User("usuario");
 
-        $userLoginService = new UserLoginService();
-        $facebookSessionManager = $this->createMock(FacebookSessionManager::class);
+        $userLoginService = new UserLoginService(new FacebookSessionManager());
 
-        $facebookSessionManager->method('getSessions')->willReturn(5);
+        $this->assertEquals("User not found", $userLoginService->logout($user->getUserName()));
+    }
 
-        $this->assertEquals(5,$facebookSessionManager->getSessions());
+    /**
+     * @test
+     */
+    public function loggedUserLoggingOutReturnsOk(): void
+    {
+        $user = new User("usuario");
+
+        $userLoginService = new UserLoginService(new FacebookSessionManager());
+        $userLoginService->manualLogin($user);
+
+        $this->assertEquals("User not found", $userLoginService->logout($user->getUserName()));
     }
 }

@@ -6,6 +6,11 @@ use UserLoginService\Application\SessionManager;
 
 class FacebookSessionManager implements SessionManager
 {
+    public function logout(string $user): void
+    {
+
+    }
+
     public function login(string $userName, string $password): bool
     {
         //Imaginad que esto en realidad realiza una llamada al API de Facebook
