@@ -10,21 +10,21 @@ use UserLoginService\Application\SessionManager;
 use UserLoginService\Application\UserLoginService;
 use UserLoginService\Domain\User;
 use UserLoginService\Infrastructure\FacebookSessionManager;
-use function mysql_xdevapi\getSession;
 
 
 final class UserLoginServiceTest extends TestCase
 {
     private $userLoginService;
+    private $sessionManager;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $sessionManager = Mockery::mock(SessionManager::class);
+        $this->sessionManager = Mockery::mock(SessionManager::class);
 
-        $sessionManager->allows('getSessions')->andReturn(5);
+        $this->sessionManager->allows('getSessions')->andReturn(5);
 
-        $this->userLoginService = new UserLoginService($sessionManager);
+        $this->userLoginService = new UserLoginService($this->sessionManager);
     }
 
 
@@ -80,6 +80,38 @@ final class UserLoginServiceTest extends TestCase
 
         $this->userLoginService->manualLogin($user);
 
-        $this->assertEquals("User not found", $this->userLoginService->logout($user->getUserName()));
+        $this->assertEquals("Ok", $this->userLoginService->logout($user->getUserName()));
+    }
+
+    /**
+     * @test
+     */
+    public function userIsLoggedInApiIsSuccessful(): void
+    {
+        $user = new User("usuario", "password");
+        $sessionManagerSpy = Mockery::spy(SessionManager::class);
+
+        $this->sessionManager->allows('login')->andReturn(true);
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $this->assertEquals("Login correcto", $userLoginService->login($user->getUserName(), $user->getPassword()));
+
+        $sessionManagerSpy->shouldNotHaveBeenCalled(login, $user->getPassword());
+    }
+
+    /**
+     * @test
+     */
+    public function userIsLoggedInApiIsUnsuccessful(): void
+    {
+        $user = new User("usuario", "password");
+        $sessionManager = Mockery::spy(SessionManager::class);
+
+        $this->sessionManager->allows('login')->andReturn(false);
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $this->assertEquals("Login incorrecto", $userLoginService->login($user->getUserName(), $user->getPassword()));
+
+        $sessionManager->shouldHaveReceived()->login($user->getUserName(), $user->getPassword());
     }
 }

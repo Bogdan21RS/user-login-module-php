@@ -17,15 +17,15 @@ class UserLoginService
      */
     public function manualLogin(User $user): void
     {
-        if (in_array($user, $this->loggedUsers)) {
+        if (in_array($user->getUserName(), $this->loggedUsers)) {
             throw new \Exception("User already logged in");
         }
-        $this->loggedUsers[] = $user;
+        $this->loggedUsers[] = $user->getUserName();
     }
 
     public function getLoggedUser(User $user): string
     {
-        if (in_array($user, $this->loggedUsers)) {
+        if (in_array($user->getUserName(), $this->loggedUsers)) {
             return "user logged";
         }
         return "user not logged";
@@ -36,16 +36,23 @@ class UserLoginService
         return $this->sessionManager->getSessions();
     }
 
-    public function logout(string $user)
+    public function logout(User $user) : string
     {
-        if (!in_array($user, $this->loggedUsers)) {
+        if (!in_array($user->getUserName(), $this->loggedUsers)) {
             return "User not found";
         }
 
-        $this->sessionManager->logout($user);
+        $this->sessionManager->logout($user->getUserName());
 
         return "Ok";
     }
 
-
+    public function login(string $userName, string $password)
+    {
+        if ($this->sessionManager->login($userName, $password)) {
+            $this->manualLogin(new User($userName, $password));
+            return "Login correcto";
+        }
+        return "Login incorrecto";
+    }
 }
