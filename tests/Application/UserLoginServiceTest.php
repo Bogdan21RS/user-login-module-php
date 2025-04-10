@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace UserLoginService\Tests\Application;
 
+use Exception;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 use UserLoginService\Application\SessionManager;
@@ -14,8 +15,9 @@ use UserLoginService\Infrastructure\FacebookSessionManager;
 
 final class UserLoginServiceTest extends TestCase
 {
-    private $userLoginService;
+    private UserLoginService $userLoginService;
     private $sessionManager;
+    private User $usuario;
 
     protected function setUp(): void
     {
@@ -25,6 +27,8 @@ final class UserLoginServiceTest extends TestCase
         $this->sessionManager->allows('getSessions')->andReturn(5);
 
         $this->userLoginService = new UserLoginService($this->sessionManager);
+
+        $this->usuario = new User("usuario", "password");
     }
 
 
@@ -33,24 +37,22 @@ final class UserLoginServiceTest extends TestCase
      */
     public function userAlreadyLoggedIn()
     {
-        $user = new User("usuario");
 
         $this->expectExceptionMessage("User already logged in");
 
-        $this->userLoginService->manualLogin($user);
-        $this->userLoginService->manualLogin($user);
+        $this->userLoginService->manualLogin($this->usuario);
+        $this->userLoginService->manualLogin($this->usuario);
     }
 
     /**
      * @test
+     * @throws Exception
      */
     public function userIsLoggedIn(): void
     {
-        $user = new User("usuario");
+        $this->userLoginService->manualLogin($this->usuario);
 
-        $this->userLoginService->manualLogin($user);
-
-        $this->assertEquals("user logged", $this->userLoginService->getLoggedUser($user));
+        $this->assertEquals("user logged", $this->userLoginService->getLoggedUser($this->usuario));
     }
 
     /**
@@ -66,9 +68,7 @@ final class UserLoginServiceTest extends TestCase
      */
     public function unloggedUserLoggingOutReturnsNotFound(): void
     {
-        $user = new User("usuario");
-
-        $this->assertEquals("User not found", $this->userLoginService->logout($user->getUserName()));
+        $this->assertEquals("User not found", $this->userLoginService->logout($this->usuario));
     }
 
     /**
@@ -76,42 +76,40 @@ final class UserLoginServiceTest extends TestCase
      */
     public function loggedUserLoggingOutReturnsOk(): void
     {
-        $user = new User("usuario");
+        $this->userLoginService->manualLogin($this->usuario);
 
-        $this->userLoginService->manualLogin($user);
-
-        $this->assertEquals("Ok", $this->userLoginService->logout($user->getUserName()));
+        $this->assertEquals("Ok", $this->userLoginService->logout($this->usuario));
     }
 
     /**
      * @test
+     * @throws Exception
      */
     public function userIsLoggedInApiIsSuccessful(): void
     {
-        $user = new User("usuario", "password");
         $sessionManagerSpy = Mockery::spy(SessionManager::class);
 
         $this->sessionManager->allows('login')->andReturn(true);
         $userLoginService = new UserLoginService($this->sessionManager);
 
-        $this->assertEquals("Login correcto", $userLoginService->login($user->getUserName(), $user->getPassword()));
+        $this->assertEquals("Login correcto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
 
-        $sessionManagerSpy->shouldNotHaveBeenCalled(login, $user->getPassword());
+        $sessionManagerSpy->shouldHaveBeenCalled();
     }
 
     /**
      * @test
+     * @throws Exception
      */
     public function userIsLoggedInApiIsUnsuccessful(): void
     {
-        $user = new User(   "usuario", "password");
         $sessionManager = Mockery::spy(SessionManager::class);
 
         $this->sessionManager->allows('login')->andReturn(false);
         $userLoginService = new UserLoginService($this->sessionManager);
 
-        $this->assertEquals("Login incorrecto", $userLoginService->login($user->getUserName(), $user->getPassword()));
+        $this->assertEquals("Login incorrecto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
 
-        $sessionManager->shouldHaveReceived()->login($user->getUserName(), $user->getPassword());
+        $sessionManager->shouldHaveReceived()->login($this->usuario->getUserName(), $this->usuario->getPassword());
     }
 }

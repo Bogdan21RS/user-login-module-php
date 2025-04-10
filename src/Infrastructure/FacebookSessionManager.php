@@ -6,9 +6,9 @@ use UserLoginService\Application\SessionManager;
 
 class FacebookSessionManager implements SessionManager
 {
-    public function logout(string $user): void
+    public function logout(string $user): bool
     {
-
+        return rand(0, 1) == 1;
     }
 
     public function login(string $userName, string $password): bool

@@ -2,6 +2,7 @@
 
 namespace UserLoginService\Application;
 
+use Exception;
 use UserLoginService\Domain\User;
 
 class UserLoginService
@@ -13,12 +14,12 @@ class UserLoginService
         $this->sessionManager = $sessionManager;
     }
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function manualLogin(User $user): void
     {
         if (in_array($user->getUserName(), $this->loggedUsers)) {
-            throw new \Exception("User already logged in");
+            throw new Exception("User already logged in");
         }
         $this->loggedUsers[] = $user->getUserName();
     }
@@ -47,7 +48,10 @@ class UserLoginService
         return "Ok";
     }
 
-    public function login(string $userName, string $password)
+    /**
+     * @throws Exception
+     */
+    public function login(string $userName, string $password): string
     {
         if ($this->sessionManager->login($userName, $password)) {
             $this->manualLogin(new User($userName, $password));
