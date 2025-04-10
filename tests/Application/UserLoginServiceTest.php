@@ -104,7 +104,7 @@ final class UserLoginServiceTest extends TestCase
      */
     public function userIsLoggedInApiIsUnsuccessful(): void
     {
-        $user = new User("usuario", "password");
+        $user = new User(   "usuario", "password");
         $sessionManager = Mockery::spy(SessionManager::class);
 
         $this->sessionManager->allows('login')->andReturn(false);
