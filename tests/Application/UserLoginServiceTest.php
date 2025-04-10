@@ -128,20 +128,31 @@ final class UserLoginServiceTest extends TestCase
      * @test
      * @throws Exception
      */
-    public function logoutServiceUnavailable(): void
+    public function logoutServiceUnavailableThrowsException(): void
     {
+        $this->expectException(\Exception::class);
         $this->expectExceptionMessage("ServiceNotAvailable");
 
         $sessionManagerSpy = Mockery::spy(SessionManager::class);
+        $sessionManagerSpy->allows('logout')->andThrow(new \Exception("ServiceNotAvailable"));
 
-
-        $sessionManagerSpy->allows('logout')->andReturn(false);
-
-        $sessionManagerSpy->allows('login')->andReturn(false);
         $userLoginService = new UserLoginService($sessionManagerSpy);
+        $userLoginService->logout($this->usuario);
+    }
 
-        $this->assertEquals("Login incorrecto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
+    /**
+     * @test
+     * @throws Exception
+     */
+    public function userNotLoggedInThrowsException(): void
+    {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("UserNotLoggedIn");
 
-        $sessionManagerSpy->shouldHaveReceived('login')->with($this->usuario->getUserName(), $this->usuario->getPassword());
+        $sessionManagerSpy = Mockery::spy(SessionManager::class);
+        $sessionManagerSpy->allows('logout')->andThrow(new \Exception("UserNotLoggedIn"));
+
+        $userLoginService = new UserLoginService($sessionManagerSpy);
+        $userLoginService->logout($this->usuario);
     }
 }
