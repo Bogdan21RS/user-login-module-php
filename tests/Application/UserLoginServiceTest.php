@@ -6,6 +6,7 @@ namespace UserLoginService\Tests\Application;
 
 use Exception;
 use Mockery;
+use Mockery\ExpectationInterface;
 use PHPUnit\Framework\TestCase;
 use UserLoginService\Application\SessionManager;
 use UserLoginService\Application\UserLoginService;
@@ -14,7 +15,6 @@ use UserLoginService\Domain\User;
 
 final class UserLoginServiceTest extends TestCase
 {
-    private UserLoginService $userLoginService;
     private SessionManager $sessionManager;
     private User $usuario;
 
@@ -33,11 +33,12 @@ final class UserLoginServiceTest extends TestCase
      */
     public function userAlreadyLoggedIn()
     {
-
         $this->expectExceptionMessage("User already logged in");
 
-        $this->userLoginService->manualLogin($this->usuario);
-        $this->userLoginService->manualLogin($this->usuario);
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $userLoginService->manualLogin($this->usuario);
+        $userLoginService->manualLogin($this->usuario);
     }
 
     /**
@@ -99,12 +100,12 @@ final class UserLoginServiceTest extends TestCase
     {
         $sessionManagerSpy = Mockery::spy(SessionManager::class);
 
-        $this->sessionManager->allows('login')->andReturn(true);
-        $userLoginService = new UserLoginService($this->sessionManager);
+        $sessionManagerSpy->allows('login')->andReturn(true);
+        $userLoginService = new UserLoginService($sessionManagerSpy);
 
         $this->assertEquals("Login correcto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
 
-        $sessionManagerSpy->shouldHaveReceived()->login($this->usuario->getUserName(), $this->usuario->getPassword());
+        $sessionManagerSpy->shouldHaveReceived('login')->with($this->usuario->getUserName(), $this->usuario->getPassword());
     }
 
     /**
@@ -113,13 +114,34 @@ final class UserLoginServiceTest extends TestCase
      */
     public function userIsLoggedInApiIsUnsuccessful(): void
     {
-        $sessionManager = Mockery::spy(SessionManager::class);
+        $sessionManagerSpy = Mockery::spy(SessionManager::class);
 
-        $this->sessionManager->allows('login')->andReturn(false);
-        $userLoginService = new UserLoginService($this->sessionManager);
+        $sessionManagerSpy->allows('login')->andReturn(false);
+        $userLoginService = new UserLoginService($sessionManagerSpy);
 
         $this->assertEquals("Login incorrecto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
 
-        $sessionManager->shouldHaveReceived()->login($this->usuario->getUserName(), $this->usuario->getPassword());
+        $sessionManagerSpy->shouldHaveReceived('login')->with($this->usuario->getUserName(), $this->usuario->getPassword());
+    }
+
+    /**
+     * @test
+     * @throws Exception
+     */
+    public function logoutServiceUnavailable(): void
+    {
+        $this->expectExceptionMessage("ServiceNotAvailable");
+
+        $sessionManagerSpy = Mockery::spy(SessionManager::class);
+
+
+        $sessionManagerSpy->allows('logout')->andReturn(false);
+
+        $sessionManagerSpy->allows('login')->andReturn(false);
+        $userLoginService = new UserLoginService($sessionManagerSpy);
+
+        $this->assertEquals("Login incorrecto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
+
+        $sessionManagerSpy->shouldHaveReceived('login')->with($this->usuario->getUserName(), $this->usuario->getPassword());
     }
 }
