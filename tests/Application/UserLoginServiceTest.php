@@ -10,13 +10,12 @@ use PHPUnit\Framework\TestCase;
 use UserLoginService\Application\SessionManager;
 use UserLoginService\Application\UserLoginService;
 use UserLoginService\Domain\User;
-use UserLoginService\Infrastructure\FacebookSessionManager;
 
 
 final class UserLoginServiceTest extends TestCase
 {
     private UserLoginService $userLoginService;
-    private $sessionManager;
+    private SessionManager $sessionManager;
     private User $usuario;
 
     protected function setUp(): void
@@ -24,16 +23,13 @@ final class UserLoginServiceTest extends TestCase
         parent::setUp();
         $this->sessionManager = Mockery::mock(SessionManager::class);
 
-        $this->sessionManager->allows('getSessions')->andReturn(5);
-
-        $this->userLoginService = new UserLoginService($this->sessionManager);
-
         $this->usuario = new User("usuario", "password");
     }
 
 
     /**
      * @test
+     * @throws Exception
      */
     public function userAlreadyLoggedIn()
     {
@@ -50,9 +46,10 @@ final class UserLoginServiceTest extends TestCase
      */
     public function userIsLoggedIn(): void
     {
-        $this->userLoginService->manualLogin($this->usuario);
+        $userLoginService = new UserLoginService($this->sessionManager);
+        $userLoginService->manualLogin($this->usuario);
 
-        $this->assertEquals("user logged", $this->userLoginService->getLoggedUser($this->usuario));
+        $this->assertEquals("user logged", $userLoginService->getLoggedUser($this->usuario));
     }
 
     /**
@@ -60,7 +57,11 @@ final class UserLoginServiceTest extends TestCase
      */
     public function returnedNumberOfSessionsIsCorrect(): void
     {
-        $this->assertEquals(5, $this->userLoginService->getExternalSessions());
+        $this->sessionManager->allows('getSessions')->andReturn(5);
+
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $this->assertEquals(5, $userLoginService->getExternalSessions());
     }
 
     /**
@@ -68,17 +69,26 @@ final class UserLoginServiceTest extends TestCase
      */
     public function unloggedUserLoggingOutReturnsNotFound(): void
     {
-        $this->assertEquals("User not found", $this->userLoginService->logout($this->usuario));
+        $this->sessionManager->allows('logout')->andReturn(false);
+
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $this->assertEquals("User not found", $userLoginService->logout($this->usuario));
     }
 
     /**
      * @test
+     * @throws Exception
      */
     public function loggedUserLoggingOutReturnsOk(): void
     {
-        $this->userLoginService->manualLogin($this->usuario);
+        $this->sessionManager->allows('logout')->andReturn(true);
 
-        $this->assertEquals("Ok", $this->userLoginService->logout($this->usuario));
+        $userLoginService = new UserLoginService($this->sessionManager);
+
+        $userLoginService->manualLogin($this->usuario);
+
+        $this->assertEquals("Ok", $userLoginService->logout($this->usuario));
     }
 
     /**
@@ -94,7 +104,7 @@ final class UserLoginServiceTest extends TestCase
 
         $this->assertEquals("Login correcto", $userLoginService->login($this->usuario->getUserName(), $this->usuario->getPassword()));
 
-        $sessionManagerSpy->shouldHaveBeenCalled();
+        $sessionManagerSpy->shouldHaveReceived()->login($this->usuario->getUserName(), $this->usuario->getPassword());
     }
 
     /**

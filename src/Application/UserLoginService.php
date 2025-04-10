@@ -21,6 +21,7 @@ class UserLoginService
         if (in_array($user->getUserName(), $this->loggedUsers)) {
             throw new Exception("User already logged in");
         }
+
         $this->loggedUsers[] = $user->getUserName();
     }
 
